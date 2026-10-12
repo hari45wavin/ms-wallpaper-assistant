@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-微软壁纸助手 —— 一键发布流水线
+壁纸助手 —— 一键发布流水线
 
 依赖: 一枚 Gitee 私人令牌(仅勾 projects 权限), 存一次, 之后长期复用。
 GitHub 侧走工作区里的 REST 脚本 F:\\Harness\\tools\\github_push.py（用 gh 的令牌），
@@ -39,6 +39,16 @@ from pathlib import Path
 
 import requests
 
+# 2026-10-12 修(发布现场崩过一次): Windows 控制台默认 GBK ——
+# build-exe.py 子进程按 GBK 打中文路径, 本脚本按 UTF-8 解码得到一个 �,
+# 再把这行 print 回 GBK 控制台就 UnicodeEncodeError, 发布跑到一半当场崩。
+# 父子两侧都钉成 UTF-8(与 preflight_release.py 同一套做法)。
+try:
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+except Exception:
+    pass
+
 REPO_DIR = Path(__file__).resolve().parent.parent
 OWNER, REPO = 'kele551', 'ms-wallpaper-assistant'
 BRANCH = 'main'
@@ -58,9 +68,11 @@ PY = os.environ.get('MWA_PY', r'F:\Harness\toolchain\python\envs\default\Scripts
 GIT_EXEC_PATH = os.environ.get('MWA_GIT', r'F:/Harness/toolchain/PortableGit/versions/1.2.0/mingw64/bin')
 GIT_EXE = GIT_EXEC_PATH + '/git.exe'              # 绝对路径: 有的执行环境按名字找不到 git(WinError 2)
 GH_PUSH = os.environ.get('MWA_GH_PUSH', r'F:\Harness\tools\github_push.py')   # 纯 API 推 GitHub(含附件), 2026-09-22 重写
-ZIP_TPL = 'MSWallpaperAssistant-v%s.zip'
-APP_NAME = '微软壁纸助手'
-EXE_NAME = '微软壁纸助手.exe'                      # version.json 里写的就是这个名字, 必须传上去
+ZIP_TPL = 'MSWallpaperAssistant-v%s.zip'          # zip 的 ASCII 名不改(仓库英文标识稳定)
+# 2026-10-12 产品改名: 「微软壁纸助手」->「壁纸助手」。GitHub 侧的 ASCII 附件名
+# (MSWallpaperAssistant-vX.Y.Z.exe)同样不改 —— 那条线路怕中文名被削。
+APP_NAME = '壁纸助手'
+EXE_NAME = '壁纸助手.exe'                          # version.json 里写的就是这个名字, 必须传上去
 
 # 版本常量所在的三个文件
 VER_FILES = [
@@ -192,13 +204,14 @@ def update_readme(ver, commit=True):
     new = txt
     new = re.sub(r'releases/download/v[0-9.]+/', 'releases/download/v%s/' % ver, new)
     new = re.sub(r'MSWallpaperAssistant-v[0-9.]+\.zip', 'MSWallpaperAssistant-v%s.zip' % ver, new)
-    new = re.sub(r'微软壁纸助手-v[0-9.]+\.exe', '微软壁纸助手-v%s.exe' % ver, new)
+    new = re.sub(r'壁纸助手-v[0-9.]+\.exe', '壁纸助手-v%s.exe' % ver, new)
     new = re.sub(r'version-v[0-9.]+', 'version-v%s' % ver, new)
     new = re.sub(r'下载 v[0-9.]+ 安装包', '下载 v%s 安装包' % ver, new)
     new = re.sub(r'当前云端最新版本：v[0-9.]+', '当前云端最新版本：v%s' % ver, new)
     new = re.sub(r'当前最新：v[0-9.]+', '当前最新：v%s' % ver, new)
-    new = re.sub(r'微软壁纸助手 v[0-9.]+', '微软壁纸助手 v%s' % ver, new)
+    new = re.sub(r'壁纸助手 v[0-9.]+', '壁纸助手 v%s' % ver, new)
     new = re.sub(r'比如 `v[0-9.]+`', '比如 `v%s`' % ver, new)
+    new = re.sub(r'桌面壁纸 v[0-9.]+', '桌面壁纸 v%s' % ver, new)   # 2026-10-12: 菜单截图标题行也带版本
     new = re.sub(r'例如 v[0-9.]+', '例如 v%s' % ver, new)
     if new != txt:
         # 2026-10-09 (审查 C11): 必须带 newline=''。
