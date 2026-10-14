@@ -1,12 +1,11 @@
 <div align="center">
-<img src="docs/icon.png" alt="桌面壁纸" height="120" width="120">
+<img src="../docs/icon.png" alt="桌面壁纸" height="120" width="120">
 
 <h1>Desktop Wallpaper Assistant</h1>
 
-<p><a href="README.md">简体中文</a> | English</p>
+<p><a href="../README.md">简体中文</a> | English</p>
 
 <a href="https://github.com/kele551/ms-wallpaper-assistant/releases" title="Download"><img alt="Downloads" src="https://img.shields.io/github/downloads/kele551/ms-wallpaper-assistant/total?style=flat-square&label=GitHub%20downloads&color=brightgreen" height="30"></a>
-<a href="https://gitee.com/kele551/ms-wallpaper-assistant/access" title="Gitee 仓库访问统计 · IP 全部累计 · 每日自动更新"><img alt="Gitee visits" src="https://img.shields.io/badge/Gitee-visits_240-c71d24?style=flat-square&labelColor=3d4552"></a>
 
 <a href="https://github.com/kele551/ms-wallpaper-assistant/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/badge/license-MIT-blue?style=flat-square"></a>
 <img alt="Platform" src="https://img.shields.io/badge/platform-Windows-blue?style=flat-square">
@@ -41,7 +40,7 @@
 <img alt="Resolved" src="https://img.shields.io/github/issues-closed/kele551/ms-wallpaper-assistant?style=flat-square&label=resolved">
 <img alt="Language" src="https://img.shields.io/github/languages/top/kele551/ms-wallpaper-assistant?style=flat-square">
 <img alt="Code Size" src="https://img.shields.io/github/languages/code-size/kele551/ms-wallpaper-assistant?style=flat-square&label=code%20size">
-<a href="https://github.com/kele551/ms-wallpaper-assistant/blob/main/CONTRIBUTING.md"><img alt="PRs Welcome" src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square"></a>
+<a href="https://github.com/kele551/ms-wallpaper-assistant/blob/main/.github/CONTRIBUTING.md"><img alt="PRs Welcome" src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square"></a>
 </p>
 
 </details>
@@ -138,7 +137,7 @@ See the "Code signing policy（代码签名政策）" section below.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [LICENSE](../LICENSE).
 
 ---
 
