@@ -11,14 +11,14 @@ import sys
 sys.stdout.reconfigure(encoding='utf-8')
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(HERE)      # 仓库根：core.ps1 / menu.ps1 / 微软壁纸助手.ico 都在这里
+ROOT = os.path.dirname(HERE)      # 仓库根：core.ps1 / menu.ps1 / 壁纸助手.ico 都在这里
 T = os.path.join(HERE, '_t2')
 if os.path.isdir(T):
     shutil.rmtree(T, ignore_errors=True)
 os.makedirs(T, exist_ok=True)
 
 PS = r'''
-$T = 'F:\wp-src\tests\_t2'
+$T = '@ROOT@\tests\_t2'
 $out = @()
 function chk($n, $c, $x) {
   if ($c) { $script:out += ('  [通过] ' + $n) }
@@ -32,18 +32,20 @@ $before = @(Get-ChildItem -LiteralPath $realDesk -File -Filter '*.lnk' -ErrorAct
 # ---- 搭一个假的"程序目录": core.ps1 / menu.ps1(去掉主菜单) / ico / 假 exe ----
 $data = Join-Path $T 'data'
 New-Item -ItemType Directory -Force -Path $data | Out-Null
-Copy-Item 'F:\wp-src\core.ps1' (Join-Path $data 'core.ps1') -Force
-Copy-Item 'F:\wp-src\微软壁纸助手.ico' (Join-Path $data '微软壁纸助手.ico') -Force
-$menuSrc = Get-Content -LiteralPath 'F:\wp-src\menu.ps1' -Raw -Encoding UTF8
+Copy-Item '@ROOT@\core.ps1' (Join-Path $data 'core.ps1') -Force
+Copy-Item '@ROOT@\壁纸助手.ico' (Join-Path $data '壁纸助手.ico') -Force
+$menuSrc = Get-Content -LiteralPath '@ROOT@\menu.ps1' -Raw -Encoding UTF8
 $cut = $menuSrc.IndexOf('# ---------- 主菜单 ----------')
 if ($cut -lt 1) { $cut = $menuSrc.Length }
 $menuSrc.Substring(0, $cut) | Set-Content -LiteralPath (Join-Path $data 'menu_test.ps1') -Encoding UTF8
 $fakeExe = Join-Path $data '壁纸助手.exe'
 Set-Content -LiteralPath $fakeExe -Value 'fake' -Encoding ASCII
-Set-Content -LiteralPath (Join-Path $data 'launcher.txt') -Value $fakeExe -Encoding UTF8
+[System.IO.File]::WriteAllText((Join-Path $data 'launcher.txt'), $fakeExe, (New-Object System.Text.UTF8Encoding($false)))
 
 . (Join-Path $data 'core.ps1')
 . (Join-Path $data 'menu_test.ps1')
+$global:BWRoot = $data
+$global:CfgPath = Join-Path $global:BWRoot 'config.json'
 chk 'BWRoot 指向临时数据目录' ($global:BWRoot -eq $data) $global:BWRoot
 
 # ---- 把"桌面"整个换成临时目录 ----
@@ -54,21 +56,22 @@ chk '桌面已被测试接管' ((Get-BwDesktopDir) -eq $desk) (Get-BwDesktopDir)
 
 # ---- 图标来源 ----
 $ico = Get-BwIconLocation $fakeExe
-chk '图标取自独立的 .ico 文件' ($ico -like '*微软壁纸助手.ico*') $ico
+chk '图标取自独立的 .ico 文件' ($ico -like '*壁纸助手.ico*') $ico
 
 # ---- 场景1: 从没建过 -> 建一次 ----
-Ensure-BwConfig | Out-Null
+Get-BwConfig | Out-Null
 $c = Get-BwConfig
 Add-Member -InputObject $c NoteProperty desktop_shortcut 'on' -Force
 Save-BwConfig $c
 $r1 = Ensure-BwDesktopShortcut
 $lnk = Get-BwDesktopLnk
+$lnkName = Split-Path $lnk -Leaf
 chk '首次运行会建快捷方式' ($r1 -eq 'create') $r1
 chk '快捷方式建在桌面上' (Test-Path -LiteralPath $lnk) $lnk
 if (Test-Path -LiteralPath $lnk) {
   $sc = (New-Object -ComObject WScript.Shell).CreateShortcut($lnk)
   chk '目标指向 exe' ($sc.TargetPath -eq $fakeExe) $sc.TargetPath
-  chk '图标指向 .ico' ($sc.IconLocation -like '*微软壁纸助手.ico*') $sc.IconLocation
+  chk '图标指向 .ico' ($sc.IconLocation -like '*壁纸助手.ico*') $sc.IconLocation
   chk '描述里带版本号' ($sc.Description -like ('*v' + $global:BWVersion + '*')) $sc.Description
 }
 $i1 = Get-BwDeskInfo
@@ -81,18 +84,18 @@ chk '第二次不重复创建' ($r2 -eq 'ok') $r2
 # ---- 场景3: 用户把它收进文件夹 -> 就地更新, 桌面根不另建 ----
 $sub = Join-Path $desk '图标'
 New-Item -ItemType Directory -Force -Path $sub | Out-Null
-Move-Item -LiteralPath $lnk -Destination (Join-Path $sub '微软壁纸助手.lnk') -Force
+Move-Item -LiteralPath $lnk -Destination (Join-Path $sub $lnkName) -Force
 $r3 = Ensure-BwDesktopShortcut
 chk '收进文件夹后就地更新' (@('ok','update') -contains $r3) $r3
-chk '桌面根没有再冒一个' (-not (Test-Path -LiteralPath (Join-Path $desk '微软壁纸助手.lnk'))) $desk
+chk '桌面根没有再冒一个' (-not (Test-Path -LiteralPath (Join-Path $desk $lnkName))) $desk
 $i3 = Get-BwDeskInfo
-chk '记住了新位置' ($i3.path -eq (Join-Path $sub '微软壁纸助手.lnk')) $i3.path
+chk '记住了新位置' ($i3.path -eq (Join-Path $sub $lnkName)) $i3.path
 
 # ---- 场景4: 用户删掉它 -> 不再自动建 ----
-Remove-Item -LiteralPath (Join-Path $sub '微软壁纸助手.lnk') -Force
+Remove-Item -LiteralPath (Join-Path $sub $lnkName) -Force
 $r4 = Ensure-BwDesktopShortcut
 chk '删掉之后不再重建' ($r4 -eq 'gone') $r4
-chk '桌面根确实还是空的' (-not (Test-Path -LiteralPath (Join-Path $desk '微软壁纸助手.lnk'))) $desk
+chk '桌面根确实还是空的' (-not (Test-Path -LiteralPath (Join-Path $desk $lnkName))) $desk
 
 # ---- 场景5: 在设置里关掉再开 -> 允许重建一个 ----
 #     (菜单 [S]-[6] 重新开启时做的正是: 清掉 path 和 created 这两个记号)
@@ -105,8 +108,8 @@ $i5.created = ''
 Save-BwDeskInfo $i5
 $r5 = Ensure-BwDesktopShortcut
 chk '重新开启后能再建一个' ($r5 -eq 'create') $r5
-if (Test-Path -LiteralPath (Join-Path $desk '微软壁纸助手.lnk')) {
-  (Get-Item -LiteralPath (Join-Path $desk '微软壁纸助手.lnk')).LastWriteTime = (Get-Date).AddDays(-3)
+if (Test-Path -LiteralPath (Join-Path $desk $lnkName)) {
+  (Get-Item -LiteralPath (Join-Path $desk $lnkName)).LastWriteTime = (Get-Date).AddDays(-3)
   (Get-Item -LiteralPath $fakeExe).LastWriteTime = Get-Date
   $r5b = Ensure-BwDesktopShortcut
   chk 'exe 更新后会就地刷新图标' ($r5b -eq 'update') $r5b
@@ -152,10 +155,9 @@ chk '真实桌面一个快捷方式都没多/没少' ($before -eq $after) "$befo
 Set-Content -LiteralPath (Join-Path $T 'out.txt') -Value $out -Encoding UTF8
 '''
 
-# 2026-10-10: 模板里的绝对路径原本写死作者机器的 F:\wp-src，换台机器必然找不到
-# core.ps1 / menu.ps1 / ico。现在模板里只留这一个根，在这里统一换成实际仓库根
+# 2026-10-10: 模板里的绝对路径用中性占位符 @ROOT@，在这里统一换成实际仓库根
 # （tests 的上一级）—— 注意替换后 $T 正好等于上面算出来的 <仓库>\tests\_t2。
-PS = PS.replace(r'F:\wp-src', ROOT)
+PS = PS.replace('@ROOT@', ROOT)
 
 p = os.path.join(T, 'run.ps1')
 with open(p, 'w', encoding='utf-8-sig') as f:
